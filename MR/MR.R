@@ -11,7 +11,7 @@ library(doParallel)
 
 
 
-#####generate the gene-to-microbiome pairs in the sigmoid colon  
+#####MR analysis for the gene expression-to-microbiome regulation
 
 tissues <- c("Transverse", "Sigmoid", "ileum")
 samples <-  fread(file = "/data/slurm/wanghc/microbiome_QTL/MR_gut_microbiome/gut_microbiome_genus/genus.txt",sep = "\t", header = FALSE)
@@ -128,7 +128,7 @@ for (h in 1:nrow(samples)) {
     }}}
 
 
-   ####### study-wise FDR 
+####### study-wise FDR 
 
 ######merge all the MR pairs
     tissues <- c("Transverse", "Sigmoid", "ileum")
@@ -196,3 +196,150 @@ filtered_df <-  significant_results%>%
 write.table(filtered_df, file = print(paste0("/data/slurm/wanghc/microbiome_QTL/MR_gut_microbiome/study_wise_FDR_MR/final_result/Transverse_MR_rm1.txt")), quote = FALSE, sep = "\t", row.names = F,col.names = T)
 
 
+######MR analysis for the microbiome-to-gene expression regulation
+args <- commandArgs(T)
+samples <- args[1]
+
+Chr <- args[2] 
+
+
+
+  Phe1.dat <- paste0("/dell/wanghc/microbiome_QTL/MR_gut_microbiome/gut_microbiome_genus/",samples,"/",samples,"_",Chr,".expo.txt")
+  Phe2.dat <- paste0("/dell/wanghc/microbiome_QTL/MR_microbiome_gut/Micorbiome_eQTL/Micorbiome_Transverse/Transverse/",Chr,".1.txt.gz")
+  mr.pairs <- paste0("/dell/wanghc/microbiome_QTL/MR_microbiome_gut/MicorbiometoeQTL/Micorbiome_Transverse/",samples,"-Transverse_eQTL/",samples,"-Transverse_eQTL.",Chr,".pair")
+ 
+  Phe1_dat_test <- fread(file = Phe1.dat, sep = "\t", header = T) 
+                         #col.names = c("Phenotype", "SNP", "beta", "pval","se","eaf","samplesize","effect_allele", "other_allele")) 
+ 
+ Phe1_dat_test <- data.frame(Phe1_dat_test)
+ if(nrow(Phe1_dat_test)==0){
+  return(NULL)
+}
+  
+ Phe2_dat_test<- fread(file = Phe2.dat, sep = "\t", header = T ) %>% select (Phenotype, SNP=rsid,  beta,  pval, se, eaf=maf,samplesize,   effect_allele,        other_allele)
+ Phe2_dat_test <- data.frame(Phe2_dat_test)
+ mr_pairs <- fread(file= mr.pairs, 
+                    sep = "\t", header = FALSE, col.names = c("bac", "eQTL"))
+ mr_pairs <- data.frame(mr_pairs)
+  #b_file <- paste0("/data/slurm/licy/QTL_integration/1.Database/Ref_panel/GTEx_v8/plink/chr8")
+  b_file <- paste0("/dell/wanghc/b_file/",Chr)
+  perform_mr <- function(i){
+    Phe2_out_dat_test<- Phe2_dat_test %>% filter(Phenotype == mr_pairs[i,'eQTL'])
+    Phe1_exp_dat_test <- Phe1_dat_test %>% filter(Phenotype == mr_pairs[i,'bac']) %>% filter(SNP %in% Phe2_out_dat_test$SNP)
+    #       exp_SNP <- Phe1_exp_dat$rsid
+    #       out_SNP <- Phe2_out_dat$rsid
+    #       com_SNP <- intersect(exp_SNP, out_SNP)
+    #       Phe1_exp_dat <- Phe1_exp_dat[exp_SNP %in% com_SNP,]
+    check <- 1
+    if(length(Phe1_exp_dat_test$SNP) > 1){
+      check <<- try(
+        Phe1_exp_dat_test<- ld_clump_local(Phe1_exp_dat_test %>% dplyr::rename(rsid = SNP), clump_kb = 100, clump_r2 = 0.01, clump_p = 1,
+                                           bfile = b_file, plink_bin = get_plink_exe()) %>% dplyr::rename(SNP = rsid),
+        silent = FALSE
+      )
+    }
+    if("try-error" %in% class(check)){
+      return(NULL)
+    }
+    #       com_SNP <- Phe1_exp_dat$rsid
+    #       Phe2_out_dat <- Phe2_out_dat[out_SNP %in% com_SNP,]
+    Phe2_out_dat_test <- Phe2_out_dat_test %>% filter(SNP %in% Phe1_exp_dat_test$SNP)
+    Phe1_exp_dat_test <- format_data(Phe1_exp_dat_test, type = "exposure", phenotype_col = "Phenotype", snp_col = "SNP", beta_col = "beta", se_col = "se",
+                                     effect_allele_col = "effect_allele", other_allele_col = "other_allele", pval_col = "pval", samplesize_col = "samplesize")
+    Phe2_out_dat_test <- format_data(Phe2_out_dat_test, type = "outcome", phenotype_col = "Phenotype", snp_col = "SNP", beta_col = "beta", se_col = "se",
+                                     effect_allele_col = "effect_allele", other_allele_col = "other_allele",pval_col = "pval", samplesize_col = "samplesize",eaf_col = "eaf")
+    mr_dat <- harmonise_data(exposure_dat = Phe1_exp_dat_test, outcome_dat = Phe2_out_dat_test) %>% filter(mr_keep == TRUE)
+    if(length(mr_dat$SNP) >= 1){
+      if(length(mr_dat$SNP) == 1){
+        mr_res <- mr(mr_dat, method_list = "mr_wald_ratio")
+      }else if(length(mr_dat$SNP) > 1){
+        mr_res <- mr(mr_dat, method_list = "mr_ivw")
+      }
+      mr_dat_file <- paste0( "/data/slurm/wanghc/Microbiome_eQTL/Microbiome_Transverse/",samples,"-Transverse_eQTL","/mr.dat/",mr_pairs[i,'bac'], "-", mr_pairs[i,'eQTL'], ".mr.dat")
+      write.table(mr_dat, file = mr_dat_file, quote = FALSE, sep = "\t", row.names = FALSE)
+      mr_res <- mr_res%>% dplyr::select(-id.exposure, -id.outcome) %>% dplyr::select(exposure, everything())
+      return(mr_res)
+    }
+  }
+  cl <- makeCluster(8)
+  registerDoParallel(cl)
+  clusterEvalQ(cl, .libPaths("/dell/wanghc/R_1/4.2"))
+  res <- foreach(i = 1:nrow(mr_pairs), .combine = rbind, .packages = c("dplyr", "TwoSampleMR", "ieugwasr", "plinkbinr"), .errorhandling = "pass") %dopar% {
+    perform_mr(i)
+ }
+  write.table(res, file = print(paste0("/data/slurm/wanghc/Microbiome_eQTL/Microbiome_Transverse/",samples,"-Transverse_eQTL/",samples,"-Transverse_eQTL.",Chr,".MR")), quote = FALSE, sep = "\t", row.names = FALSE)
+  stopImplicitCluster()
+  stopCluster(cl)
+
+######MR analysis for the microbiome-to-methylation regulation
+args <- commandArgs(T)
+samples <- args[1]
+
+Chr <- args[2] 
+
+
+
+  Phe1.dat <- paste0("/data/slurm/wanghc/microbiome_QTL/MR_gut_microbiome/gut_microbiome_genus/",samples,"/",samples,"_",Chr,".expo.txt")
+  Phe2.dat <- paste0("/data/slurm/wanghc/microbiome_QTL/MR_gut_microbiome/Colon-microbiome/mQTL-microbiome/mQTL_out/",Chr,".2.txt")
+  mr.pairs <- paste0("/data/slurm/wanghc/microbiome_QTL/MR_gut_microbiome/Colon-microbiome/mQTL-microbiome/Microbiome_mQTL/",samples,"-Transverse_mQTL/",samples,"-Transverse_mQTL.",Chr,".pair")
+ Phe1_dat_test <- fread(file = Phe1.dat, sep = "\t", header = T) 
+                         #col.names = c("Phenotype", "SNP", "beta", "pval","se","eaf","samplesize","effect_allele", "other_allele")) 
+  #%>% mutate(samplesize = 318)
+ Phe1_dat_test <- data.frame(Phe1_dat_test)
+ if(nrow(Phe1_dat_test)==0){
+  return(NULL)
+}
+  #Phe2_dat_test<- fread(file = '/data/slurm/wanghc/microbiome_QTL/MR_gut_microbiome/Colon-microbiome/family.Acidaminococcaceae/family.Acidaminococcaceae.id.2166_chr9.txt', sep = "\t", header = FALSE, 
+  #col.names = c("Phenotype", "SNP", "beta", "effect_allele", "other_allele", "pval", "se", "samplesize"))
+  Phe2_dat_test<- fread(file = Phe2.dat, sep = "\t", header = FALSE, 
+                        col.names = c("Phenotype","SNP",  "eaf",  "pval", "beta", "se","samplesize", "effect_allele", "other_allele"))
+ Phe2_dat_test <- data.frame(Phe2_dat_test)
+  mr_pairs <- fread(file= mr.pairs, 
+                    sep = "\t", header = FALSE, col.names = c("bac", "mQTL"))
+ mr_pairs <- data.frame(mr_pairs)
+  #b_file <- paste0("/data/slurm/licy/QTL_integration/1.Database/Ref_panel/GTEx_v8/plink/chr8")
+  b_file <- paste0("/data/slurm/wanghc/b_file/",Chr)
+  perform_mr <- function(i){
+    Phe2_out_dat_test<- Phe2_dat_test %>% filter(Phenotype == mr_pairs[i,'mQTL'])
+    Phe1_exp_dat_test <- Phe1_dat_test %>% filter(Phenotype == mr_pairs[i,'bac']) %>% filter(SNP %in% Phe2_out_dat_test$SNP)
+
+    check <- 1
+if(length(Phe1_exp_dat_test$SNP) > 1){
+      check <<- try(
+        Phe1_exp_dat_test<- ld_clump_local(Phe1_exp_dat_test %>% dplyr::rename(rsid = SNP), clump_kb = 100, clump_r2 = 0.01, clump_p = 1,
+                                           bfile = b_file, plink_bin = get_plink_exe()) %>% dplyr::rename(SNP = rsid),
+        silent = FALSE
+      )
+    }
+    if("try-error" %in% class(check)){
+      return(NULL)
+    }
+    
+    Phe2_out_dat_test <- Phe2_out_dat_test %>% filter(SNP %in% Phe1_exp_dat_test$SNP)
+    Phe1_exp_dat_test <- format_data(Phe1_exp_dat_test, type = "exposure", phenotype_col = "Phenotype", snp_col = "SNP", beta_col = "beta", se_col = "se",
+                                     effect_allele_col = "effect_allele", other_allele_col = "other_allele", pval_col = "pval", samplesize_col = "samplesize")
+    Phe2_out_dat_test <- format_data(Phe2_out_dat_test, type = "outcome", phenotype_col = "Phenotype", snp_col = "SNP", beta_col = "beta", se_col = "se",
+                                     effect_allele_col = "effect_allele", other_allele_col = "other_allele",pval_col = "pval", samplesize_col = "samplesize",eaf_col = "eaf")
+    mr_dat <- harmonise_data(exposure_dat = Phe1_exp_dat_test, outcome_dat = Phe2_out_dat_test) %>% filter(mr_keep == TRUE)
+    if(length(mr_dat$SNP) >= 1){
+      if(length(mr_dat$SNP) == 1){
+        mr_res <- mr(mr_dat, method_list = "mr_wald_ratio")
+      }else if(length(mr_dat$SNP) > 1){
+        mr_res <- mr(mr_dat, method_list = "mr_ivw")
+      }
+      mr_dat_file <- paste0( "/data/slurm/wanghc/microbiome_QTL/MR_gut_microbiome/Colon-microbiome/mQTL-microbiome/Microbiome_mQTL/",samples,"-Transverse_mQTL","/mr.dat/",mr_pairs[i,'bac'], "-", mr_pairs[i,'mQTL'], ".mr.dat")
+      write.table(mr_dat, file = mr_dat_file, quote = FALSE, sep = "\t", row.names = FALSE)
+      mr_res <- mr_res%>% dplyr::select(-id.exposure, -id.outcome) %>% dplyr::select(exposure, everything())
+      return(mr_res)
+    }
+  }
+  cl <- makeCluster(8)
+  registerDoParallel(cl)
+  clusterEvalQ(cl, .libPaths("/data/slurm/wanghc/R_1/4.2"))
+  res <- foreach(i = 1:nrow(mr_pairs), .combine = rbind, .packages = c("dplyr", "TwoSampleMR", "ieugwasr", "plinkbinr"), .errorhandling = "pass") %dopar% {
+    perform_mr(i)
+  }
+  write.table(res, file = print(paste0("/data/slurm/wanghc/microbiome_QTL/MR_gut_microbiome/Colon-microbiome/mQTL-microbiome/Microbiome_mQTL/",samples,"-Transverse_mQTL/",samples,"-Transverse_mQTL.",Chr,".MR")), quote = FALSE, sep = "\t"
+, row.names = FALSE)
+  stopImplicitCluster()
+  stopCluster(cl)
