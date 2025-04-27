@@ -128,24 +128,71 @@ for (h in 1:nrow(samples)) {
     }}}
 
 
-    ####### FDR 
+   ####### study-wise FDR 
 
+######merge all the MR pairs
     tissues <- c("Transverse", "Sigmoid", "ileum")
     for (a in tissues) {
     for (h in samples) {
   
 
 
-MR.result <- paste0("/data/slurm/wanghc/microbiome_QTL/MR_gut_microbiome/Colon-microbiome/eQTL-microbiome/",a,"_eQTL-Microbiome/", a,"_eQTL-", h,"/final.test")
+ bacteria <- samples$V1[h]
+  
+  # Construct the MR.result filepath
+  MR.result <- paste0("/data/slurm/wanghc/microbiome_QTL/MR_gut_microbiome/",a,"-microbiome_genus/",a,"_eQTL-", bacteria, "/final.test")
+  
+  # Read MR result file, with column names
+  MR_Result <- fread(MR.result, sep = "\t", header = FALSE,
+                     col.names = c('exposure', 'outcome', 'method', 'nsnp', 'b', 'se', 'pval'))
+  
+ 
+  MR_Result[, tissue := a]
+  
+  # Store the current data frame into the list
+  merged_list[[h]] <- MR_Result
+}
 
+# Combine all data frames into one large table
+final_merged_result <- rbindlist(merged_list, use.names = TRUE, fill = TRUE)
 
+# Save the merged result
+write.table(final_merged_result, file = print(paste0("/data/slurm/wanghc/microbiome_QTL/MR_gut_microbiome/study_wise_FDR/",a,"_final.txt")),
+            quote = FALSE, row.names = FALSE, col.names = TRUE,sep ="\t")}}
 
-MR_Result <- fread(file=MR.result, sep = "\t", header = FALSE, col.names = c('exposure',        'outcome',      'method',       'nsnp', 'b',    'se',   'pval'))
+file_names <- c("Ileum_final.MR", "Sigmoid_final.MR", "Transverse_final.MR")
 
+# Initialize empty list
+merged_list <- list()
+
+# Loop through files, read and add tissue column
+for (file in file_names) {
+  data <- fread(file = print(paste0("/sugon/wanghc/Microbiome_eQTL/study_wise_filter/",file)), sep="\t", header=F)
+  # Add tissue column based on filename
+  tissue_name <- sub("_final\\.MR$", "", file)
+  data[, tissue := tissue_name]
+  merged_list[[file]] <- data
+}
+
+# Merge all datasets into one
+final_merged_result_1 <- rbindlist(merged_list, use.names=TRUE, fill=TRUE)
+
+# Save merged data
+write.table(final_merged_result_1, file = print(paste0("/data/slurm/wanghc/microbiome_QTL/MR_microbiome_gut/MicorbiometoeQTL/merged.txt")),
+            quote = FALSE, row.names = FALSE, col.names = F,sep ="\t")
+
+########FDR 
+MR_Result <- fread(file= print(paste0("/data/slurm/wanghc/microbiome_QTL/MR_gut_microbiome/Colon-microbiome/mQTL-microbiome/Microbiome_mQTL/final_MR/microbiome-Transverse_mQTL.MR")), sep = "\t", header = FALSE,
+                   col.names = c('exposure', 'outcome', 'method', 'nsnp', 'b', 'se', 'pval'))
+
+MR_Result$pval <- as.numeric(MR_Result$pval)
+sum(is.na(MR_Result$pval))
 MR_Result$adjusted_pval <- p.adjust(MR_Result$pval, method="fdr")
 
 significant_results <- MR_Result[MR_Result$adjusted_pval < 0.05, ]
 
-write.table(significant_results, file = print(paste0("/data/slurm/wanghc/microbiome_QTL/MR_gut_microbiome/Colon-microbiome/eQTL-microbiome/",a,"_eQTL-Microbiome/", a,"_eQTL-", h,a,
-                                                   "/_eQTL-",h,".result.MR")), quote = FALSE, sep = "\t", row.names = FALSE)}}
+filtered_df <-  significant_results%>% 
+  filter(nsnp != 1)
+write.table(filtered_df, file = print(paste0("/data/slurm/wanghc/microbiome_QTL/MR_gut_microbiome/study_wise_FDR_MR/final_result/Transverse_MR_rm1.txt")), quote = FALSE, sep = "\t", row.names = F,col.names = T)
+
 
