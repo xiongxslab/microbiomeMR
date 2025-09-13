@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MicrobiotaMR - Microbiota Mendelian Randomization Analysis</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧬 MicrobiotaMR</h1>
+            <p class="subtitle">Interactive Database for Intestinal Gene–Microbiome Regulation and Disease Contribution</p>
+            <div class="header-info">
+                <span class="badge">Gene-to-microbiome regulation</span>
+                <span class="badge">Disease genetics</span>
+            </div>
+        </header>
+
+        <div class="search-panel">
+            <h2>🔍 Search & Filter</h2>
+            <div class="search-grid">
+                <div class="search-group">
+                    <label for="gene-search">Gene ID Search:</label>
+                    <div class="input-with-dropdown">
+                        <input type="text" id="gene-search" placeholder="Type gene ID (e.g., ENSG00000188690.12)" />
+                        <select id="gene-dropdown">
+                            <option value="">Select Gene ID...</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="search-group">
+                    <label for="gene-name-search">Gene Name Search:</label>
+                    <div class="input-with-dropdown">
+                        <input type="text" id="gene-name-search" placeholder="Type gene name (e.g., UROS)" />
+                        <select id="gene-name-dropdown">
+                            <option value="">Select Gene Name...</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="search-group">
+                    <label for="microbiota-search">Microbiota Search:</label>
+                    <div class="input-with-dropdown">
+                        <input type="text" id="microbiota-search" placeholder="Type microbiota name" />
+                        <select id="microbiota-dropdown">
+                            <option value="">Select Microbiota...</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="search-group">
+                    <label for="tissue-search">Tissue Search:</label>
+                    <div class="input-with-dropdown">
+                        <input type="text" id="tissue-search" placeholder="Type tissue name" />
+                        <select id="tissue-dropdown">
+                            <option value="">Select Tissue...</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="search-group">
+                    <label for="disease-filter">Disease Filter:</label>
+                    <div class="disease-filter-container">
+                        <select id="disease-filter">
+                            <option value="">All Diseases...</option>
+                        </select>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="include-na" checked>
+                            <label for="include-na">Include NA</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="search-group button-group">
+                    <div class="action-buttons">
+                        <button id="apply-filters" class="btn-primary">Apply Filters</button>
+                        <button id="reset-filters" class="btn-secondary">Reset Filters</button>
+                        <button id="export-data" class="btn-export">Export Results</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-panel">
+            <div class="stat-item">
+                <div class="stat-number" id="total-records">-</div>
+                <div class="stat-label">Total Records</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="filtered-records">-</div>
+                <div class="stat-label">Filtered Results</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="unique-genes">-</div>
+                <div class="stat-label">Unique Genes</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="unique-microbiota">-</div>
+                <div class="stat-label">Microbiota</div>
+            </div>
+        </div>
+
+        <div class="results-panel">
+            <h2>📋 Results Table</h2>
+            <div class="table-controls">
+                <div class="pagination">
+                    <button id="prev-page" class="btn-nav">&laquo; Previous</button>
+                    <span id="page-info">Page 1 of 1</span>
+                    <button id="next-page" class="btn-nav">Next &raquo;</button>
+                </div>
+                <div class="per-page">
+                    <label for="records-per-page">Records per page:</label>
+                    <select id="records-per-page">
+                        <option value="25">25</option>
+                        <option value="50" selected>50</option>
+                        <option value="100">100</option>
+                        <option value="500">500</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table id="results-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="gene_id">Gene ID <span class="sort-icon">⇅</span></th>
+                            <th data-sort="gene_name">Gene Name <span class="sort-icon">⇅</span></th>
+                            <th data-sort="microbiota">Microbiota <span class="sort-icon">⇅</span></th>
+                            <th data-sort="tissue">Tissue <span class="sort-icon">⇅</span></th>
+                            <th data-sort="diseases">Disease <span class="sort-icon">⇅</span></th>
+                            <th data-sort="chr">Chr <span class="sort-icon">⇅</span></th>
+                            <th data-sort="pval">P-value <span class="sort-icon">⇅</span></th>
+                            <th data-sort="se">Std Error <span class="sort-icon">⇅</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-tbody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="visualization-panel">
+            <h2>📊 Data Visualization</h2>
+            <div class="viz-controls">
+                <select id="viz-type">
+                    <option value="scatter">P-value Scatter Plot</option>
+                    <option value="heatmap">Gene-Microbiota Heatmap</option>
+                </select>
+                <button id="generate-viz" class="btn-viz">Generate Plot</button>
+            </div>
+            <div class="chart-container">
+                <canvas id="main-chart"></canvas>
+                <div id="d3-container"></div>
+            </div>
+        </div>
+
+        <footer>
+            <p>© 2024 MicrobiotaMR - Academic Research Tool</p>
+            <p class="tech-info">Built with D3.js, Chart.js, and modern web technologies</p>
+        </footer>
+    </div>
+
+    <script src="script.js?v=2"></script>
+</body>
+</html>
