@@ -13,3 +13,6 @@ Code for multiple trait colocalization analysis among gene expression, microbiom
 moloc is avaliable at https://github.com/clagiamba/moloc.
 ## MR examples
 We select the MR result of the chromosome 12 gene expression-to-microbiome composition in transverse colon as an example. 
+## Browser
+An interactive website is available to visualize and download the results from the paper.
+https://xiongxslab.github.io/microbiomeMR/
