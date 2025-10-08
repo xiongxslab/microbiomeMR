@@ -1,7 +1,7 @@
 # microbiomeMR
 The gut microbiome plays fundamental roles in various physiological and pathological processes. However, the interaction between microbiome and host gene expression, and the molecular mechanism underlying the disease regulation remain largely unclear. Here, we integrate the genetic regulatory maps of 116 microbial genera with gene expression quantitative trait loci (eQTLs) and DNA methylation QTLs (mQTLs) in three intestinal tissues to dissect the crosstalk between host gene regulation and microbiome composition.
 
-<h3 align="center">🧬 Synopsis Figure</h3>
+<h3 align="center">🧬 Synopsis</h3>
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/2e4ac2d1-5130-44d4-a453-c0900b1af7e9" width="420">
