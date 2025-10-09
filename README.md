@@ -1,5 +1,5 @@
-# microbiomeMR
-The gut microbiome plays fundamental roles in various physiological and pathological processes. However, the interaction between microbiome and host gene expression, and the molecular mechanism underlying the disease regulation remain largely unclear. Here, we integrate the genetic regulatory maps of 116 microbial genera with gene expression quantitative trait loci (eQTLs) and DNA methylation QTLs (mQTLs) in three intestinal tissues to dissect the crosstalk between host gene regulation and microbiome composition.
+# microbiomeMR study
+The gut microbiome plays fundamental roles in various physiological and pathological processes. However, the interaction between microbiome and host gene expression, and the molecular mechanism underlying the disease regulation remain largely unclear. Here, we integrate the genetic regulatory maps of 116 microbial genera with gene expression quantitative trait loci (eQTLs) and DNA methylation QTLs (mQTLs) in three intestinal tissues to dissect the crosstalk between host gene regulation and microbiome composition. We further integrate the gene-to-microbiome regulatory maps with diseases/traits genome-wide association studies (GWASs) to reveal microbiome-dependent disease loci.
 
 <h3 align="center">🧬 Synopsis</h3>
 
@@ -27,5 +27,5 @@ moloc is avaliable at https://github.com/clagiamba/moloc.
 ## MR examples
 We select the MR result of the chromosome 12 gene expression-to-microbiome composition in transverse colon as an example. 
 ## Interactive database
-The interactive database is available for users to visualize and download results.
+We compile the gene-microbiome-disease regulatory maps into our interactive database. 
 https://xiongxslab.github.io/microbiomeMR/
