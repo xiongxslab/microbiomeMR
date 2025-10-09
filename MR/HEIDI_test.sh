@@ -1,4 +1,37 @@
 ####Heidi test 
+####produce ma file 
+.libPaths("/data/slurm/wanghc/R")
+library(data.table)
+library(dplyr)
+library(foreach)
+library(tidyr)
+
+args <- commandArgs(T)
+microbiome <- args[1]
+Chr_txt <-  fread(file = "/data/slurm/wanghc/microbiome_QTL/SMR/microbiome_esd/chr.txt",sep = "\t", header = FALSE)
+all_data <- list()
+for (i in 1:nrow(Chr_txt)) {
+        chr<-Chr_txt$V1[i]
+maf_file <- paste0("/data/slurm/licy/QTL_integration/1.Database/Ref_panel/GTEx_v8/plink_maf/",chr,".frq")
+maf <- fread(maf_file, sep = "\t", header = TRUE) %>% dplyr::select(CHR, SNP, A1, A2, MAF) %>% rename(Chr = CHR, Freq = MAF)
+
+Phe1.dat <- paste0("/data/slurm/wanghc/microbiome_QTL/MR_gut_microbiome/gut_microbiome_genus/",microbiome,"/",microbiome,"-", chr, ".txt.2.smr.gz")
+Phe_dat <-fread(file = Phe1.dat, sep = "\t", header = F,
+      col.names = c("Phenotype", "SNP", "rsid", "Beta","effect_allele", "other_allele","p","se","samplesize")) %>%
+  inner_join(y = maf, by = "SNP") %>%
+  mutate(Beta = ifelse(effect_allele == A1, Beta, -Beta)) %>%
+  select( SNP, A1, A2, Freq, Beta, se, p,samplesize)%>%  rename(freq = Freq, b = Beta, n = samplesize)
+  Phe_esd_file <- paste0("/data/slurm/wanghc/microbiome_QTL/SMR/","microbiome_esd/genus/", microbiome,"-",chr,".ma")
+  write.table(Phe_dat, file = Phe_esd_file, quote = FALSE, sep = "\t", row.names = FALSE)
+  all_data[[chr]] <- Phe_dat
+}
+
+merged_data <- bind_rows(all_data)
+
+# Save the merged data to a file
+merged_file <- paste0("/data/slurm/wanghc/microbiome_QTL/SMR/microbiome_esd/", microbiome, ".ma")
+write.table(merged_data, file = merged_file, quote = FALSE, sep = "\t", row.names = FALSE)
+
 ####produce epi file     
 .libPaths("/data/slurm/wanghc/R") 
 library(data.table)
