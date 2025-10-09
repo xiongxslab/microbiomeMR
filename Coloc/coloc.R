@@ -1,12 +1,7 @@
-samples <-  c("Bifidobacteriaceae.id.433","Enterobacteriaceae.id.3469", "Oxalobacteraceae.id.2966", "Rikenellaceae.id.967","Verrucomicrobiaceae.id.4036",
-              "Christensenellaceae.id.1866", "Erysipelotrichaceae.id.2149", "Pasteurellaceae.id.3689","Ruminococcaceae.id.2050","Victivallaceae.id.2255",
-              "Clostridiaceae1.id.1869","Peptococcaceae.id.2024","Streptococcaceae.id.1850","ClostridialesvadinBB60group.id.11286","Peptostreptococcaceae.id.2042",
-              "Coriobacteriaceae.id.811","Lachnospiraceae.id.1987",
-              "Porphyromonadaceae.id.943","Defluviitaleaceae.id.1924", 
-              "Lactobacillaceae.id.1836","Prevotellaceae.id.960","BacteroidalesS24.7group.id.11173",
-              "Desulfovibrionaceae.id.3169","Methanobacteriaceae.id.121","Rhodospirillaceae.id.2717","Veillonellaceae.id.2172","Acidaminococcaceae.id.2166","Actinomycetaceae.id.421",
-              "Alcaligenaceae.id.2875","Bacteroidaceae.id.917""Desulfovibrionaceae.id.3169", "Methanobacteriaceae.id.121", "Rhodospirillaceae.id.2717" ,"Veillonellaceae.id.2172")
 
+#####Coloc for the gene-to-microbiome regulation
+
+samples <-  fread(file = "/data/slurm/wanghc/microbiome_QTL/MR_gut_microbiome/gut_microbiome_genus/genus.txt",sep = "\t", header = FALSE)
 tissues <- c("Transverse", "Sigmoid", "ileum")
 for (a in tissues) {
 for (h in samples) {
